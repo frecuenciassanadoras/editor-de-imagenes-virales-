@@ -192,17 +192,16 @@ REGLAS ESTRICTAS:
 async function generatePhoto(analysis) {
   // Prompt siguiendo las instrucciones estrictas: limpio, sin texto, sin logos
   const finalPrompt = [
-    analysis.clean_scene, // La escena detallada que extrajo GPT, garantizando que es limpia.
-    "Square composition with the visual subject centered and enough space around it for a shallow editorial crop",
-    "Authentic news photojournalism style, high-detail DSLR camera quality",
-    "Absolutely no text overlays, captions, watermarks, logos, brand names, signatures, frames or graphics",
-    "Pristine authentic natural colors, clean photo frame",
-    "The subject (the animal) is sharply focused, the immediate foreground figures are present but softly blurred",
-    "High fidelity reconstruction of the original photographic scene, not a new scene",
-    "No graphic borders, no signature, no additional graphic design elements"
-  ].join(". ");
+    "Use the supplied reference image as the strict visual source for this image edit.",
+    "Preserve its real people, animals, number of panels, pose, camera angle, environment and overall composition as faithfully as possible.",
+    "Recreate it as a high-quality authentic photojournalism image, not as a generic portrait or a new scene.",
+    analysis.clean_scene,
+    "Vertical editorial composition designed for a 4:5 social-media cover.",
+    "Do not add new captions, logos, watermarks, signatures, frames, labels or graphic elements.",
+    "Keep natural colors and realistic documentary lighting."
+  ].join(" ");
 
-  const res = await openaiImageGenerate(finalPrompt);
+  const res = await openaiImageEdit(finalPrompt);
 
   const image = res.data?.[0];
   if (image?.b64_json) return `data:image/png;base64,${image.b64_json}`;
@@ -212,7 +211,7 @@ async function generatePhoto(analysis) {
 
 // ─── PASO 3: COMPONER PORTADA EN CANVAS HD ───────────────
 async function composeCanvas(photoUrl, analysis) {
-  // DALL-E's signed image URL is loaded before composing the final 4:5 canvas.
+  // The edited image is loaded before composing the final 4:5 canvas.
   const photo = await loadImage(photoUrl);
 
   // Clear canvas
@@ -220,13 +219,12 @@ async function composeCanvas(photoUrl, analysis) {
   ctx.fillStyle = "#000";
   ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
-  // ── 1. Draw photo (top 70%, cover crop, natural) ──
-  const photoZoneH = CANVAS_H * PHOTO_PCT;  // 945px
-  const scale = Math.max(CANVAS_W / photo.width, photoZoneH / photo.height);
+  // ── 1. Draw photo across the complete 4:5 cover ──
+  const scale = Math.max(CANVAS_W / photo.width, CANVAS_H / photo.height);
   const dw = photo.width  * scale;
   const dh = photo.height * scale;
   const dx = (CANVAS_W - dw) / 2;
-  const dy = (photoZoneH - dh) / 2;
+  const dy = (CANVAS_H - dh) / 2;
 
   // Slight brightness/contrast enhancement (natural, not extreme)
   ctx.save();
@@ -243,10 +241,6 @@ async function composeCanvas(photoUrl, analysis) {
   grad.addColorStop(1,    "rgba(0,0,0,1)");
   ctx.fillStyle = grad;
   ctx.fillRect(0, gradStart, CANVAS_W, CANVAS_H - gradStart);
-
-  // Solid black base: the lower 30% is reserved exclusively for the headline.
-  ctx.fillStyle = "rgba(0,0,0,1)";
-  ctx.fillRect(0, photoZoneH, CANVAS_W, CANVAS_H - photoZoneH);
 
   // ── 3. Prepare text ──
   const headline  = analysis.headline.toUpperCase();
@@ -376,26 +370,24 @@ async function openaiChat(messages, model = "gpt-4o", max_tokens = 500) {
   return res.json();
 }
 
-async function openaiImageGenerate(prompt) {
+async function openaiImageEdit(prompt) {
     if (!isUsableApiKey(state.apiKey)) {
         throw new Error("Ingresa nuevamente tu API Key completa y pulsa Guardar.");
     }
 
-    const res = await fetch("https://api.openai.com/v1/images/generations", {
+    const form = new FormData();
+    form.append("model", "gpt-image-2");
+    form.append("image", state.imageFile, state.imageFile.name || "referencia.png");
+    form.append("prompt", prompt);
+    form.append("size", "1024x1536");
+    form.append("quality", "high");
+
+    const res = await fetch("https://api.openai.com/v1/images/edits", {
         method: "POST",
         headers: {
-            "Content-Type": "application/json",
             "Authorization": `Bearer ${state.apiKey}`
         },
-        body: JSON.stringify({
-            model: "gpt-image-2",
-            prompt: prompt,
-            n: 1,
-            // Square source matches the wide top-photo area with only a light crop.
-            size: "1024x1024",
-            quality: "high"
-            // El parámetro 'style' ha sido eliminado para evitar el error de la API
-        })
+        body: form
     });
 
     if (!res.ok) {
