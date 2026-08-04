@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Generador Editorial de Portadas – Animales</title>
+  <meta name="description" content="Generador automático de portadas editoriales para noticias de animales en Facebook e Instagram.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=League+Spartan:wght@700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+
+    <!-- ── HEADER ── -->
+    <header class="header">
+      <div class="header-inner">
+        <div class="brand">
+          <div class="brand-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+              <path d="M2 17l10 5 10-5"/>
+              <path d="M2 12l10 5 10-5"/>
+            </svg>
+          </div>
+          <div>
+            <h1>Generador Editorial</h1>
+            <span class="brand-sub">Portadas Virales para Animales · 1080 × 1350 px</span>
+          </div>
+        </div>
+        <div class="api-pill">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <input type="password" id="apiKey" placeholder="API Key de OpenAI  (sk-...)" autocomplete="off">
+          <button id="saveKeyBtn" class="save-key-btn">Guardar</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- ── WORKSPACE ── -->
+    <main class="workspace">
+
+      <!-- LEFT: Upload + Controls -->
+      <aside class="sidebar">
+
+        <section class="card" id="uploadCard">
+          <h2 class="card-title">
+            <span class="step-num">1</span>
+            Imagen de Referencia
+          </h2>
+          <div class="dropzone" id="dropzone">
+            <input type="file" id="fileInput" accept="image/*" class="file-input">
+            <div class="dz-inner" id="dzInner">
+              <svg class="dz-icon" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21 15 16 10 5 21"/>
+              </svg>
+              <p class="dz-text">Arrastra aquí la imagen de referencia<br><span class="dz-sub">o haz clic para buscar · JPG, PNG, WEBP</span></p>
+            </div>
+            <img id="thumbImg" class="dz-thumb" style="display:none" alt="Referencia">
+          </div>
+        </section>
+
+        <section class="card">
+          <h2 class="card-title">
+            <span class="step-num">2</span>
+            Estilo Editorial
+          </h2>
+          <div class="style-info">
+            <div class="style-row">
+              <span class="style-label">Formato</span>
+              <span class="style-val">1080 × 1350 px (4:5)</span>
+            </div>
+            <div class="style-row">
+              <span class="style-label">Foto</span>
+              <span class="style-val">70% superior · Regenerada (Limpia)</span>
+            </div>
+            <div class="style-row">
+              <span class="style-label">Texto</span>
+              <span class="style-val">30% inferior · degradado negro</span>
+            </div>
+            <div class="style-row">
+              <span class="style-label">Titular</span>
+              <span class="style-val cyan-dot">Igual que la referencia</span>
+            </div>
+            <div class="style-row">
+              <span class="style-label">Keywords</span>
+              <span class="style-val" style="color:#22B8FF;font-weight:700;">Celeste #22B8FF</span>
+            </div>
+            <div class="style-row">
+              <span class="style-label">Tipografía</span>
+              <span class="style-val">Anton / League Spartan</span>
+            </div>
+          </div>
+          <p class="style-note">La IA usará <strong>tu imagen original</strong> como referencia para re-crear una escena <strong>fotográfica completamente nueva</strong>, de alta calidad, SIN texto superpuesto, SIN logos y SIN marcas de agua. Luego aplicará el diseño editorial encima.</p>
+        </section>
+
+        <section class="card action-card">
+          <button id="generateBtn" class="gen-btn" disabled>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+            </svg>
+            Generar Portada Editorial
+          </button>
+          <div id="statusBox" class="status-box" style="display:none"></div>
+          <button id="downloadBtn" class="dl-btn" style="display:none">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Descargar HD (1080 × 1350)
+          </button>
+        </section>
+
+      </aside>
+
+      <!-- RIGHT: Side-by-side Preview -->
+      <section class="preview-area">
+        <div class="preview-header">
+          <h2>Vista Previa Comparativa</h2>
+          <span class="format-tag">4:5 · HD</span>
+        </div>
+        <div class="compare-grid">
+
+          <div class="compare-box">
+            <div class="compare-label original">Imagen de Referencia (Original)</div>
+            <div class="compare-content" id="leftPreview">
+              <div class="empty-hint">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+                  <rect x="3" y="3" width="18" height="18" rx="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <polyline points="21 15 16 10 5 21"/>
+                </svg>
+                <p>Sube la imagen de referencia</p>
+              </div>
+              <img id="leftImg" style="display:none" class="preview-img" alt="Referencia">
+            </div>
+          </div>
+
+          <div class="compare-box">
+            <div class="compare-label result">Portada Editorial Generada</div>
+            <div class="compare-content" id="rightPreview">
+              <div class="empty-hint" id="rightHint">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                </svg>
+                <p>Aquí aparecerá la portada generada</p>
+              </div>
+              <canvas id="outputCanvas" width="1080" height="1350" class="output-canvas" style="display:none"></canvas>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
