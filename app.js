@@ -209,16 +209,14 @@ async function generatePhoto(analysis) {
 
   const res = await openaiImageGenerate(finalPrompt);
 
-  const imageB64 = res.data?.[0]?.b64_json;
-  if (!imageB64) throw new Error("La API no devolvió la fotografía generada.");
-
-  // Base64 avoids external-image CORS restrictions when exporting the canvas.
-  return `data:image/png;base64,${imageB64}`;
+  const imageUrl = res.data?.[0]?.url;
+  if (!imageUrl) throw new Error("La API no devolvió la fotografía generada.");
+  return imageUrl;
 }
 
 // ─── PASO 3: COMPONER PORTADA EN CANVAS HD ───────────────
 async function composeCanvas(photoUrl, analysis) {
-  // The generated photo is returned as Base64, so canvas export remains reliable.
+  // DALL-E's signed image URL is loaded before composing the final 4:5 canvas.
   const photo = await loadImage(photoUrl);
 
   // Clear canvas
@@ -367,8 +365,7 @@ async function openaiChat(messages, model = "gpt-4o", max_tokens = 500) {
       model,
       messages,
       max_tokens,
-      temperature: 0.2,
-      response_format: { type: "json_object" }
+      temperature: 0.2
     })
   });
 
@@ -392,8 +389,7 @@ async function openaiImageGenerate(prompt) {
             n: 1,
             // Square source matches the wide top-photo area with only a light crop.
             size: "1024x1024",
-            quality: "hd",
-            response_format: "b64_json"
+            quality: "hd"
             // El parámetro 'style' ha sido eliminado para evitar el error de la API
         })
     });
