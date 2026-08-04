@@ -37,30 +37,25 @@ const outputCanvas = document.getElementById("outputCanvas");
 const ctx          = outputCanvas.getContext("2d");
 
 // ─── INIT ─────────────────────────────────────────────────
-if (state.apiKey) {
-  apiKeyInput.value = maskKey(state.apiKey);
+if (!isUsableApiKey(state.apiKey) && state.apiKey) {
+  // A previously saved masked key cannot be used as an Authorization header.
+  localStorage.removeItem("oai_key");
+  state.apiKey = "";
 }
 
 // ─── API KEY ──────────────────────────────────────────────
 saveKeyBtn.addEventListener("click", () => {
   const val = apiKeyInput.value.trim();
-  if (!val || !val.startsWith("sk-")) {
-    showStatus("⚠ La API Key debe comenzar con «sk-».", "error");
+  if (!isUsableApiKey(val)) {
+    showStatus("⚠ Pega la API Key completa (sin puntos ni caracteres ocultos). Debe comenzar con «sk-».", "error");
     return;
   }
   state.apiKey = val;
   localStorage.setItem("oai_key", val);
-  apiKeyInput.value = maskKey(val);
+  // Keep the field empty after saving so it is always ready for a new paste.
+  apiKeyInput.value = "";
   showStatus("✅ API Key guardada correctamente.", "success");
   syncBtn();
-});
-
-apiKeyInput.addEventListener("focus", () => {
-  if (state.apiKey) apiKeyInput.value = state.apiKey;
-});
-
-apiKeyInput.addEventListener("blur", () => {
-  if (state.apiKey) apiKeyInput.value = maskKey(state.apiKey);
 });
 
 // ─── FILE UPLOAD ─────────────────────────────────────────
@@ -209,9 +204,10 @@ async function generatePhoto(analysis) {
 
   const res = await openaiImageGenerate(finalPrompt);
 
-  const imageUrl = res.data?.[0]?.url;
-  if (!imageUrl) throw new Error("La API no devolvió la fotografía generada.");
-  return imageUrl;
+  const image = res.data?.[0];
+  if (image?.b64_json) return `data:image/png;base64,${image.b64_json}`;
+  if (image?.url) return image.url;
+  throw new Error("La API no devolvió la fotografía generada.");
 }
 
 // ─── PASO 3: COMPONER PORTADA EN CANVAS HD ───────────────
@@ -355,6 +351,10 @@ function loadImage(src) {
 }
 
 async function openaiChat(messages, model = "gpt-4o", max_tokens = 500) {
+  if (!isUsableApiKey(state.apiKey)) {
+    throw new Error("Ingresa nuevamente tu API Key completa y pulsa Guardar.");
+  }
+
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -377,6 +377,10 @@ async function openaiChat(messages, model = "gpt-4o", max_tokens = 500) {
 }
 
 async function openaiImageGenerate(prompt) {
+    if (!isUsableApiKey(state.apiKey)) {
+        throw new Error("Ingresa nuevamente tu API Key completa y pulsa Guardar.");
+    }
+
     const res = await fetch("https://api.openai.com/v1/images/generations", {
         method: "POST",
         headers: {
@@ -384,12 +388,12 @@ async function openaiImageGenerate(prompt) {
             "Authorization": `Bearer ${state.apiKey}`
         },
         body: JSON.stringify({
-            model: "dall-e-3",
+            model: "gpt-image-2",
             prompt: prompt,
             n: 1,
             // Square source matches the wide top-photo area with only a light crop.
             size: "1024x1024",
-            quality: "hd"
+            quality: "high"
             // El parámetro 'style' ha sido eliminado para evitar el error de la API
         })
     });
@@ -418,4 +422,9 @@ function hideStatus() {
 function maskKey(key) {
   if (!key || key.length < 10) return key;
   return key.slice(0, 7) + "•".repeat(20) + key.slice(-4);
+}
+
+function isUsableApiKey(key) {
+  // HTTP headers only permit ASCII here; the bullet characters in a masked key are invalid.
+  return typeof key === "string" && /^sk-[\x21-\x7E]{8,}$/.test(key);
 }
